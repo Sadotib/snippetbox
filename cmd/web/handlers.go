@@ -1,18 +1,26 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"html/template"
-	"log"
 	"net/http"
+	"snippetbox/internal/models"
 	"strconv"
 )
 
-func home(w http.ResponseWriter, r *http.Request) {
+func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
-		http.NotFound(w, r)
+		app.notFound(w)
 		return
 	}
-	// w.Write([]byte("Hello from Snippetbox"))
+
+	snippets, err := app.snippets.Latest()
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+
 	files := []string{
 		"./ui/html/base.tmpl",
 		"./ui/html/partials/nav.tmpl",
@@ -20,39 +28,83 @@ func home(w http.ResponseWriter, r *http.Request) {
 	}
 	ts, err := template.ParseFiles(files...)
 	if err != nil {
-		log.Print(err.Error())
-		http.Error(w, "Internal Server Error", 500)
+		app.errorLog.Print(err.Error())
+		app.serverError(w, err)
 		return
 	}
 
-	err = ts.ExecuteTemplate(w, "base", nil)
+	data := templateData{
+		Snippets: snippets,
+	}
+
+	err = ts.ExecuteTemplate(w, "base", data)
 	if err != nil {
-		log.Print(err.Error())
-		http.Error(w, "Internal Server Error", 500)
+		app.errorLog.Print(err.Error())
+		app.serverError(w, err)
 	}
 }
 
-func snippetView(w http.ResponseWriter, r *http.Request) {
+func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 	sId := r.URL.Query().Get("id")
 	iId, err := strconv.Atoi(sId)
 	if err != nil || iId < 1 {
-		http.Error(w, "Invalid ID", http.StatusNotFound)
+		app.errorLog.Print(err.Error())
+		app.notFound(w)
 		return
 	}
-	w.Write([]byte("Viewing a specific snippet: " + sId))
+	snippet, err := app.snippets.Get(iId)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			app.notFound(w)
+		} else {
+			app.serverError(w, err)
+		}
+		return
+	}
+
+	// Write the snippet data as a plain-text HTTP response body.
+	files := []string{
+		"./ui/html/base.tmpl",
+		"./ui/html/partials/nav.tmpl",
+		"./ui/html/pages/view.tmpl",
+	}
+
+	ts, err := template.ParseFiles(files...)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+
+	data := &templateData{
+		Snippet: snippet,
+	}
+
+	err = ts.ExecuteTemplate(w, "base", data)
+	if err != nil {
+		app.serverError(w, err)
+	}
 }
 
-func snippetCreate(w http.ResponseWriter, r *http.Request) {
+func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost) /*setting the header should be done before
 		WriteHeader/Write is called, otherwise no effect*/
-
-		w.Header().Add("Cache-Control", "public")
-		w.Header().Add("Cache-Control", "max-age=31536000")
-
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed) /*we can use this helper function
+		app.clientError(w, http.StatusMethodNotAllowed) /*we can use this helper function
 		which calls WriteHeader and Write behind the scenes*/
 		return
 	}
+
+	title := "O snail"
+	content := "O snail\nClimb Mount Fuji,\nBut slowly, slowly!\n\n– Kobayashi Issa"
+	expires := 7
+	// Pass the data to the SnippetModel.Insert() method, receiving the
+	// ID of the new record back.
+	id, err := app.snippets.Insert(title, content, expires)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+	// Redirect the user to the relevant page for the snippet.
+	http.Redirect(w, r, fmt.Sprintf("/snippet/view?id=%d", id), http.StatusSeeOther)
 	w.Write([]byte("Creating a new snippet..."))
 }
