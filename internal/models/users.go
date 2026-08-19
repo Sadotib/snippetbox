@@ -10,6 +10,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// create a new UserModelInterface interface type that describes the methods that our actual UserModel struct has.
+type UserModelInterface interface {
+	Insert(name, email, password string) error
+	Authenticate(email, password string) (int, error)
+	Exists(id int) (bool, error)
+}
+
 // Define a new User type. Notice how the field names and types align
 // with the columns in the database "users" table?
 type User struct {
@@ -33,7 +40,7 @@ func (m *UserModel) Insert(name, email, password string) error {
 		return err
 	}
 
-	stmt := `INSERT INTO users (name, email, pass, created)
+	stmt := `INSERT INTO users (name, email, hashed_password, created)
  VALUES(?, ?, ?, UTC_TIMESTAMP())`
 
 	// Use the Exec() method to insert the user details and hashed password
@@ -67,7 +74,7 @@ func (m *UserModel) Authenticate(email, password string) (int, error) {
 	var id int
 	var hashedPassword []byte
 
-	stmt := "SELECT id, pass FROM users WHERE email = ?"
+	stmt := "SELECT id, hashed_password FROM users WHERE email = ?"
 
 	err := m.DB.QueryRow(stmt, email).Scan(&id, &hashedPassword)
 	if err != nil {

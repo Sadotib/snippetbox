@@ -37,7 +37,17 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.Atoi(params.ByName("id"))
 	if err != nil || id < 1 {
-		app.errorLog.Print(err.Error())
+
+		// app.errorLog.Print(err.Error())
+
+		//The issue is in the snippetView handler. When the negative ID -1 is parsed by strconv.Atoi(),
+		// it successfully converts to the integer -1 (no error occurs).
+		// However, the condition id < 1 is true, so it tries to execute app.errorLog.Print(err.Error()) when err is nil,
+		// causing a panic and resulting in a 500 error instead of the expected 404.
+
+		if err != nil {
+			app.errorLog.Print(err.Error())
+		}
 		app.notFound(w)
 		return
 	}
