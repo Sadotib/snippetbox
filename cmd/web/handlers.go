@@ -327,3 +327,13 @@ func (app *application) userLogoutPost(w http.ResponseWriter, r *http.Request) {
 func ping(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
+
+func (app *application) about(w http.ResponseWriter, r *http.Request) {
+
+	// Pass the map to the newTemplateData helper function, which will add
+	// the Session value. We then use the render() helper to execute the template.
+
+	data := app.newTemplateData(r)
+
+	app.render(w, http.StatusOK, "about.tmpl", data)
+}

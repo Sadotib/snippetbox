@@ -67,6 +67,8 @@ func (app *application) routes() http.Handler {
 	router.Handler(http.MethodGet, "/user/login", dynamic.ThenFunc(app.userLogin))
 	router.Handler(http.MethodPost, "/user/login", dynamic.ThenFunc(app.userLoginPost))
 
+	router.Handler(http.MethodGet, "/about", dynamic.ThenFunc(app.about))
+
 	// Protected (authenticated-only) application routes, using a new "protected"
 	// middleware chain which includes the requireAuthentication middleware.
 	// Because the 'protected' middleware chain appends to the 'dynamic' chain
