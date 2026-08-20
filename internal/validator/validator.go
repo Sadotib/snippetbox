@@ -95,3 +95,8 @@ func MinChars(value string, n int) bool {
 func Matches(value string, rx *regexp.Regexp) bool {
 	return rx.MatchString(value)
 }
+
+// Same returns true if a value matches another value.
+func Same(value string, mustMatch string) bool {
+	return value == mustMatch
+}
