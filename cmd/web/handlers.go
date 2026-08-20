@@ -301,8 +301,16 @@ func (app *application) userLoginPost(w http.ResponseWriter, r *http.Request) {
 	// Add the ID of the current user to the session, so that they are now
 	// 'logged in'.
 	app.sessionManager.Put(r.Context(), "authenticatedUserID", id)
+
 	// Redirect the user to the create snippet page.
-	http.Redirect(w, r, "/snippet/create", http.StatusSeeOther)
+	ogUrl := app.sessionManager.GetString(r.Context(), "ogUrl")
+	if ogUrl == "" {
+		http.Redirect(w, r, "/snippet/create", http.StatusSeeOther)
+	} else {
+		app.sessionManager.Remove(r.Context(), "ogUrl")
+		http.Redirect(w, r, ogUrl, http.StatusSeeOther)
+	}
+
 }
 
 func (app *application) userLogoutPost(w http.ResponseWriter, r *http.Request) {
