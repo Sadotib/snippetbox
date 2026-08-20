@@ -20,6 +20,7 @@ func (app *application) serverError(w http.ResponseWriter, err error) {
 
 	if app.debugFlag { //is debug flag is used, display the detailed error message
 		http.Error(w, trace, http.StatusInternalServerError)
+		return
 	} else {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
